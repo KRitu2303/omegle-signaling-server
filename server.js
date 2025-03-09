@@ -11,29 +11,42 @@ server.on("connection", (socket) => {
 
         if (data.type === "find_match") {
             if (waitingUser) {
+                // Peer Matching
                 socket.partner = waitingUser;
                 waitingUser.partner = socket;
 
-                let offer = { type: "offer", offer: waitingUser.offer };
-                socket.send(JSON.stringify(offer));
+                console.log("Match found!");
+
+                // Tell both users that they are matched
+                socket.send(JSON.stringify({ type: "match_found" }));
                 waitingUser.send(JSON.stringify({ type: "match_found" }));
 
                 waitingUser = null;
             } else {
                 waitingUser = socket;
+                console.log("Waiting for a second user...");
             }
         }
 
         if (data.type === "offer") {
-            socket.offer = data.offer;
+            if (socket.partner) {
+                console.log("Sending offer to partner...");
+                socket.partner.send(JSON.stringify({ type: "offer", offer: data.offer }));
+            }
         }
 
-        if (data.type === "answer" && socket.partner) {
-            socket.partner.send(JSON.stringify({ type: "answer", answer: data.answer }));
+        if (data.type === "answer") {
+            if (socket.partner) {
+                console.log("Sending answer to partner...");
+                socket.partner.send(JSON.stringify({ type: "answer", answer: data.answer }));
+            }
         }
 
-        if (data.type === "ice-candidate" && socket.partner) {
-            socket.partner.send(JSON.stringify({ type: "ice-candidate", candidate: data.candidate }));
+        if (data.type === "ice-candidate") {
+            if (socket.partner) {
+                console.log("Exchanging ICE Candidates...");
+                socket.partner.send(JSON.stringify({ type: "ice-candidate", candidate: data.candidate }));
+            }
         }
     });
 
@@ -41,6 +54,7 @@ server.on("connection", (socket) => {
         if (waitingUser === socket) {
             waitingUser = null;
         }
+        console.log("User disconnected");
     });
 });
 
